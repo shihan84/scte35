@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SCTE-35 Marker Insertion GUI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 2rem;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            color: #333;
+        }
+        form {
+            background: white;
+            padding: 1rem;
+            border-radius: 5px;
+            max-width: 400px;
+        }
+        label {
+            display: block;
+            margin-top: 1rem;
+        }
+        input, select {
+            width: 100%;
+            padding: 0.5rem;
+            margin-top: 0.25rem;
+        }
+        button {
+            margin-top: 1.5rem;
+            padding: 0.75rem;
+            width: 100%;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:disabled {
+            background-color: #aaa;
+        }
+        #response {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #e0ffe0;
+            border: 1px solid #0a0;
+            border-radius: 5px;
+            display: none;
+        }
+        #error {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #ffe0e0;
+            border: 1px solid #a00;
+            border-radius: 5px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>SCTE-35 Marker Insertion</h1>
+    <form id="markerForm">
+        <label for="streamName">Stream Name (Flussonic stream identifier):</label>
+        <input type="text" id="streamName" name="streamName" required />
+
+        <label for="markerType">Marker Type:</label>
+        <select id="markerType" name="markerType" required>
+            <option value="">Select marker type</option>
+            <option value="splice_insert">Splice Insert</option>
+            <option value="splice_null">Splice Null</option>
+        </select>
+
+        <label for="ptsAdjustment">PTS Adjustment (optional):</label>
+        <input type="number" id="ptsAdjustment" name="ptsAdjustment" min="0" />
+
+        <label for="spliceEventId">Splice Event ID (optional):</label>
+        <input type="number" id="spliceEventId" name="spliceEventId" min="0" />
+
+        <button type="submit">Insert SCTE-35 Marker</button>
+    </form>
+
+    <div id="response"></div>
+    <div id="error"></div>
+
+    <script>
+        const form = document.getElementById('markerForm');
+        const responseDiv = document.getElementById('response');
+        const errorDiv = document.getElementById('error');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            responseDiv.style.display = 'none';
+            errorDiv.style.display = 'none';
+
+            const streamName = form.streamName.value.trim();
+            const markerType = form.markerType.value;
+            const ptsAdjustment = form.ptsAdjustment.value ? parseInt(form.ptsAdjustment.value) : undefined;
+            const spliceEventId = form.spliceEventId.value ? parseInt(form.spliceEventId.value) : undefined;
+
+            if (!streamName || !markerType) {
+                errorDiv.textContent = 'Stream Name and Marker Type are required.';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            const payload = {
+                streamName,
+                markerType,
+                ptsAdjustment,
+                spliceEventId
+            };
+
+            try {
+                const res = await fetch('/api/insert-marker', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    responseDiv.textContent = data.message;
+                    responseDiv.style.display = 'block';
+                } else {
+                    errorDiv.textContent = data.error || 'Failed to insert SCTE-35 marker';
+                    errorDiv.style.display = 'block';
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Error: ' + err.message;
+                errorDiv.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
